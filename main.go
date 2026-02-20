@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	. "github.com/n0remac/robot-webrtc/websocket"
+	. "github.com/n0remac/OrcasMakers/websocket"
 )
 
 const (
@@ -16,6 +16,7 @@ func main() {
 	mux := http.NewServeMux()
 	// create global registry
 	globalRegistry := NewCommandRegistry()
+	mux.HandleFunc("/ws/hub", CreateWebsocket(globalRegistry))
 
 	// Apps
 	Home(mux, globalRegistry)

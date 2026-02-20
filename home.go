@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	. "github.com/n0remac/orcas-makers/html"
-	. "github.com/n0remac/orcas-makers/websocket"
+	. "github.com/n0remac/OrcasMakers/html"
+	. "github.com/n0remac/OrcasMakers/websocket"
 )
 
 func Home(mux *http.ServeMux, websocketRegistry *CommandRegistry) {
@@ -17,8 +17,14 @@ func HomePage(websocketRegistry *CommandRegistry) *Node {
 
 	websocketRegistry.RegisterWebsocket("test", func(_ string, hub *Hub, data map[string]interface{}) {
 		WsHub.Broadcast <- WebsocketMessage{
-			Room:    id,
-			Content: []byte(fmt.Sprintf("Received test message: %v", data)),
+			Room: id,
+			Content: []byte(
+				Div(
+					Id("test-message"),
+					T("Received test message: "),
+					Span(Class("font-bold"), T(fmt.Sprintf("%v", data["test"]))),
+				).Render(),
+			),
 		}
 	})
 
@@ -33,6 +39,7 @@ func HomePage(websocketRegistry *CommandRegistry) *Node {
 			Div(
 				T("Welcome to the OrcasMakers Home Page!"),
 			),
+			Div(Id("test-message")),
 			Form(
 				Attr("ws-send", "submit"),
 				Input(

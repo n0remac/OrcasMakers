@@ -1,4 +1,4 @@
-module OrcasMakers
+module github.com/n0remac/OrcasMakers
 
 go 1.25.0
 
