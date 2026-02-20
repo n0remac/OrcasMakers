@@ -1,0 +1,4 @@
+github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=
+github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
+github.com/n0remac/robot-webrtc v0.0.0-20251016190712-293c1755a534 h1:ApSHrjWCc/wCC3YCDFvrIoBqYP27xSQi+hJvnpRvyuk=
+github.com/n0remac/robot-webrtc v0.0.0-20251016190712-293c1755a534/go.mod h1:C1B9+wQH0C1y6IGfXhlvGdNmBAdhD4Oa1xn0VTbMLNc=
