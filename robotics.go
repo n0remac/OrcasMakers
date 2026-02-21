@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/n0remac/GoDom/auth"
 	"github.com/n0remac/GoDom/database"
 	. "github.com/n0remac/GoDom/html"
 )
@@ -24,12 +25,14 @@ const (
 type RoboticsApp struct {
 	store *database.DocumentStore
 	posts *PostStore
+	auth  *auth.AuthApp
 }
 
-func Robotics(mux *http.ServeMux, store *database.DocumentStore) {
+func Robotics(mux *http.ServeMux, store *database.DocumentStore, authApp *auth.AuthApp) {
 	app := &RoboticsApp{
 		store: store,
 		posts: NewPostStore(store),
+		auth:  authApp,
 	}
 	mux.HandleFunc("/robotics", app.roboticsPageHandler())
 	mux.HandleFunc("/robotics/posts", app.createPostHandler())
@@ -47,10 +50,11 @@ func (a *RoboticsApp) roboticsPageHandler() http.HandlerFunc {
 			http.Error(w, "failed to load posts", http.StatusInternalServerError)
 			return
 		}
+		currentUser, isLoggedIn := a.currentUser(r)
 
 		statusMessage := strings.TrimSpace(r.URL.Query().Get("status"))
 		errorMessage := strings.TrimSpace(r.URL.Query().Get("error"))
-		ServeNode(RoboticsPage(posts, statusMessage, errorMessage))(w, r)
+		ServeNode(RoboticsPage(posts, statusMessage, errorMessage, currentUser, isLoggedIn))(w, r)
 	}
 }
 
@@ -58,6 +62,10 @@ func (a *RoboticsApp) createPostHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if _, ok := a.currentUser(r); !ok {
+			a.respondUnauthorized(w, r)
 			return
 		}
 
@@ -76,13 +84,28 @@ func (a *RoboticsApp) createPostHandler() http.HandlerFunc {
 			}
 			writeHTML(w, http.StatusCreated,
 				RoboticsFeedbackOOB("Post created successfully.", false).Render()+
-					RoboticsPostsFeed(posts).Render(),
+					RoboticsPostsFeed(posts, true).Render(),
 			)
 			return
 		}
 
 		http.Redirect(w, r, "/robotics?status="+url.QueryEscape("post created"), http.StatusSeeOther)
 	}
+}
+
+func (a *RoboticsApp) currentUser(r *http.Request) (*auth.User, bool) {
+	if a.auth == nil {
+		return nil, false
+	}
+	return a.auth.CurrentUser(r)
+}
+
+func (a *RoboticsApp) respondUnauthorized(w http.ResponseWriter, r *http.Request) {
+	if isHTMX(r) {
+		writeHTML(w, http.StatusUnauthorized, RoboticsFeedbackOOB("Please log in to create a post.", true).Render())
+		return
+	}
+	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
 func (a *RoboticsApp) createPostFromRequest(ctx context.Context, w http.ResponseWriter, r *http.Request) (*Post, error) {
@@ -167,7 +190,20 @@ func (a *RoboticsApp) respondPostError(w http.ResponseWriter, r *http.Request, e
 	http.Redirect(w, r, "/robotics?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
 }
 
-func RoboticsPage(posts []*Post, statusMessage, errorMessage string) *Node {
+func RoboticsPage(posts []*Post, statusMessage, errorMessage string, currentUser *auth.User, isLoggedIn bool) *Node {
+	subtitle := "Recent updates from the Orcas Makers robotics team."
+	composer := Nil()
+	feedback := Nil()
+	accountLabel := Nil()
+	if isLoggedIn {
+		subtitle = "Create a post with text and one or more images."
+		composer = RoboticsCreatePostForm()
+		feedback = RoboticsFeedback(statusMessage, errorMessage)
+		if currentUser != nil {
+			accountLabel = P(Class("text-sm text-base-content/70"), T("Signed in as "+currentUser.Email))
+		}
+	}
+
 	return DefaultLayout(
 		Div(Attrs(map[string]string{
 			"class":      "flex flex-col items-center min-h-screen gap-6",
@@ -178,76 +214,81 @@ func RoboticsPage(posts []*Post, statusMessage, errorMessage string) *Node {
 				Class("w-full max-w-6xl px-4 py-6 space-y-6"),
 				Div(
 					Class("card bg-base-200 p-6 space-y-4"),
-					H1(Class("text-2xl font-bold"), T("Robotics Posts")),
-					P(Class("text-base-content/70"), T("Create a post with text and one or more images.")),
-					RoboticsFeedback(statusMessage, errorMessage),
-					Form(
-						Method("POST"),
-						Action("/robotics/posts"),
-						Attr("enctype", "multipart/form-data"),
-						Attr("hx-post", "/robotics/posts"),
-						Attr("hx-encoding", "multipart/form-data"),
-						Attr("hx-target", "#robotics-posts"),
-						Attr("hx-swap", "outerHTML"),
-						Attr("hx-on::after-request", "if(event.detail.successful){ this.reset(); }"),
-						Class("space-y-3"),
-						Div(
-							Class("space-y-2"),
-							Label(For("robotics-text"), Class("font-medium"), T("Post Text")),
-							TextArea(
-								Id("robotics-text"),
-								Name("text"),
-								Rows(5),
-								Attr("required", "required"),
-								Placeholder("Share what your robotics team is building..."),
-								Class("textarea textarea-bordered w-full"),
-							),
-						),
-						Div(
-							Class("space-y-2"),
-							Label(For("robotics-images"), Class("font-medium"), T("Images")),
-							Input(
-								Id("robotics-images"),
-								Type("file"),
-								Name("images"),
-								Attr("accept", "image/*"),
-								Attr("multiple", "multiple"),
-								Attr("required", "required"),
-								Class("file-input file-input-bordered w-full"),
-							),
-							P(
-								Class("text-xs text-base-content/70"),
-								T(fmt.Sprintf("Upload up to %d images, %dMB each.", maxRoboticsImagesPerPost, maxRoboticsImageSizeMB)),
-							),
-						),
-						Button(
-							Type("submit"),
-							Class("btn btn-primary"),
-							T("Create Post"),
-						),
-					),
+					H1(Class("text-2xl font-bold"), T("Robotics")),
+					P(Class("text-base-content/70"), T(subtitle)),
+					accountLabel,
+					feedback,
+					composer,
 				),
-				Div(
-					Class("space-y-4"),
-					H2(Class("text-xl font-semibold"), T("Recent Posts")),
-					RoboticsPostsFeed(posts),
-				),
+				RoboticsPostsFeed(posts, isLoggedIn),
 			),
 		),
 	)
 }
 
-func RoboticsPostsFeed(posts []*Post) *Node {
+func RoboticsCreatePostForm() *Node {
+	return Form(
+		Method("POST"),
+		Action("/robotics/posts"),
+		Attr("enctype", "multipart/form-data"),
+		Attr("hx-post", "/robotics/posts"),
+		Attr("hx-encoding", "multipart/form-data"),
+		Attr("hx-target", "#robotics-posts"),
+		Attr("hx-swap", "outerHTML"),
+		Attr("hx-on::after-request", "if(event.detail.successful){ this.reset(); }"),
+		Class("space-y-3"),
+		Div(
+			Class("space-y-2"),
+			Label(For("robotics-text"), Class("font-medium"), T("Post Text")),
+			TextArea(
+				Id("robotics-text"),
+				Name("text"),
+				Rows(5),
+				Attr("required", "required"),
+				Placeholder("Share what your robotics team is building..."),
+				Class("textarea textarea-bordered w-full"),
+			),
+		),
+		Div(
+			Class("space-y-2"),
+			Label(For("robotics-images"), Class("font-medium"), T("Images")),
+			Input(
+				Id("robotics-images"),
+				Type("file"),
+				Name("images"),
+				Attr("accept", "image/*"),
+				Attr("multiple", "multiple"),
+				Attr("required", "required"),
+				Class("file-input file-input-bordered w-full"),
+			),
+			P(
+				Class("text-xs text-base-content/70"),
+				T(fmt.Sprintf("Upload up to %d images, %dMB each.", maxRoboticsImagesPerPost, maxRoboticsImageSizeMB)),
+			),
+		),
+		Button(
+			Type("submit"),
+			Class("btn btn-primary"),
+			T("Create Post"),
+		),
+	)
+}
+
+func RoboticsPostsFeed(posts []*Post, canCreate bool) *Node {
 	cards := make([]*Node, 0, len(posts))
 	for _, post := range posts {
 		cards = append(cards, RoboticsPostCard(post))
 	}
 
+	emptyText := "No posts yet."
+	if canCreate {
+		emptyText = "No posts yet. Create the first robotics post above."
+	}
 	if len(cards) == 0 {
 		cards = append(cards,
 			Div(
 				Class("card bg-base-200 p-6 text-base-content/70"),
-				T("No posts yet. Create the first robotics post above."),
+				T(emptyText),
 			),
 		)
 	}

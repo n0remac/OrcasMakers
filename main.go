@@ -14,21 +14,21 @@ import (
 const webPort = ":8081"
 
 func main() {
-	mux, registry, ds, cleanup, handled := setup()
+	mux, registry, ds, authApp, cleanup, handled := setup()
 	if handled {
 		return
 	}
 	defer cleanup()
 
 	Home(mux, registry)
-	Robotics(mux, ds)
+	Robotics(mux, ds, authApp)
 
 	go ws.WsHub.Run()
 	log.Printf("Starting server on %s", webPort)
 	log.Fatal(http.ListenAndServe(webPort, mux))
 }
 
-func setup() (*http.ServeMux, *ws.CommandRegistry, *database.DocumentStore, func(), bool) {
+func setup() (*http.ServeMux, *ws.CommandRegistry, *database.DocumentStore, *auth.AuthApp, func(), bool) {
 	if err := os.MkdirAll("data", 0755); err != nil {
 		log.Fatalf("failed to create data dir: %v", err)
 	}
@@ -50,7 +50,7 @@ func setup() (*http.ServeMux, *ws.CommandRegistry, *database.DocumentStore, func
 	}
 	if handled {
 		cleanup()
-		return nil, nil, nil, nil, true
+		return nil, nil, nil, nil, nil, true
 	}
 
 	mux := http.NewServeMux()
@@ -73,5 +73,5 @@ func setup() (*http.ServeMux, *ws.CommandRegistry, *database.DocumentStore, func
 		log.Print(warning)
 	}
 
-	return mux, registry, ds, cleanup, false
+	return mux, registry, ds, authApp, cleanup, false
 }
