@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	. "github.com/n0remac/OrcasMakers/html"
-	. "github.com/n0remac/OrcasMakers/websocket"
+	. "github.com/n0remac/GoDom/html"
+	. "github.com/n0remac/GoDom/websocket"
 )
 
 func Home(mux *http.ServeMux, websocketRegistry *CommandRegistry) {
@@ -37,7 +37,7 @@ func HomePage(websocketRegistry *CommandRegistry) *Node {
 		}),
 			NavBar(),
 			Div(
-				T("Welcome to the OrcasMakers Home Page!"),
+				T("Welcome to the Orcas Makers Home Page!"),
 			),
 			Div(Id("test-message")),
 			Form(
@@ -66,7 +66,7 @@ func NavBar() *Node {
 	return Nav(Class("bg-base-300 p-4 w-full"),
 		Div(Class("container mx-auto flex justify-center"),
 			Ul(Class("flex space-x-6"),
-				Li(A(Href("/about"), T("About"))),
+				Li(A(Href("/robotics"), T("Robotics"))),
 			),
 		),
 	)
