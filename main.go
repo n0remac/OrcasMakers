@@ -11,7 +11,7 @@ import (
 	ws "github.com/n0remac/GoDom/websocket"
 )
 
-const webPort = ":8080"
+const webPort = ":8081"
 
 func main() {
 	mux, registry, ds, cleanup, handled := setup()

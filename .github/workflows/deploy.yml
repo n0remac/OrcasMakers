@@ -1,0 +1,43 @@
+name: Deploy OrcasMakers
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build linux/amd64
+        run: |
+          mkdir -p dist
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o dist/orcasmakers .
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DROPLET_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.DROPLET_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload binary
+        run: |
+          scp dist/orcasmakers "${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:/tmp/orcasmakers"
+
+      - name: Activate + restart
+        run: |
+          ssh "${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}" << 'EOF'
+          set -euo pipefail
+
+          sudo install -o orcasmakers -g orcasmakers -m 0755 /tmp/orcasmakers /srv/orcasmakers/app/orcasmakers
+
+          sudo systemctl daemon-reload
+          sudo systemctl restart orcasmakers
+          EOF
