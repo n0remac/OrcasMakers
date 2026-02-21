@@ -14,21 +14,21 @@ import (
 const webPort = ":8080"
 
 func main() {
-	mux, registry, cleanup, handled := setup()
+	mux, registry, ds, cleanup, handled := setup()
 	if handled {
 		return
 	}
 	defer cleanup()
 
 	Home(mux, registry)
-	Robotics(mux)
+	Robotics(mux, ds)
 
 	go ws.WsHub.Run()
 	log.Printf("Starting server on %s", webPort)
 	log.Fatal(http.ListenAndServe(webPort, mux))
 }
 
-func setup() (*http.ServeMux, *ws.CommandRegistry, func(), bool) {
+func setup() (*http.ServeMux, *ws.CommandRegistry, *database.DocumentStore, func(), bool) {
 	if err := os.MkdirAll("data", 0755); err != nil {
 		log.Fatalf("failed to create data dir: %v", err)
 	}
@@ -50,12 +50,18 @@ func setup() (*http.ServeMux, *ws.CommandRegistry, func(), bool) {
 	}
 	if handled {
 		cleanup()
-		return nil, nil, nil, true
+		return nil, nil, nil, nil, true
 	}
 
 	mux := http.NewServeMux()
 	registry := ws.NewCommandRegistry()
 	mux.HandleFunc("/ws/hub", ws.CreateWebsocket(registry))
+	imageHandler, err := ds.ImageHandler("/images/")
+	if err != nil {
+		cleanup()
+		log.Fatalf("failed to create image handler: %v", err)
+	}
+	mux.Handle("/images/", imageHandler)
 
 	authApp := auth.AuthWithStores(mux, registry, store, store)
 	admin.Mount(mux, authApp)
@@ -67,5 +73,5 @@ func setup() (*http.ServeMux, *ws.CommandRegistry, func(), bool) {
 		log.Print(warning)
 	}
 
-	return mux, registry, cleanup, false
+	return mux, registry, ds, cleanup, false
 }

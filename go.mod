@@ -2,7 +2,7 @@ module github.com/n0remac/OrcasMakers
 
 go 1.25.0
 
-require github.com/n0remac/GoDom v0.0.0-20260221035315-689cdb0ac8f0
+require github.com/n0remac/GoDom v0.0.0-20260221051826-5cfc25919c35
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
