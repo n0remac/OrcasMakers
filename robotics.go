@@ -10,23 +10,25 @@ import (
 	. "github.com/n0remac/GoDom/html"
 )
 
-type RoboticsApp struct {
+type App struct {
+	name string
 	store *database.DocumentStore
 	posts *PostStore
 	auth  *auth.AuthApp
 }
 
 func Robotics(mux *http.ServeMux, store *database.DocumentStore, authApp *auth.AuthApp) {
-	app := &RoboticsApp{
+	app := &App{
+		name:  "robotics",
 		store: store,
 		posts: NewPostStore(store),
 		auth:  authApp,
 	}
-	mux.HandleFunc("/robotics", app.roboticsPageHandler())
+	mux.HandleFunc("/"+app.name, app.roboticsPageHandler())
 	app.mountPostRoutes(mux)
 }
 
-func (a *RoboticsApp) roboticsPageHandler() http.HandlerFunc {
+func (a *App) roboticsPageHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -42,26 +44,26 @@ func (a *RoboticsApp) roboticsPageHandler() http.HandlerFunc {
 
 		statusMessage := strings.TrimSpace(r.URL.Query().Get("status"))
 		errorMessage := strings.TrimSpace(r.URL.Query().Get("error"))
-		ServeNode(RoboticsPage(posts, statusMessage, errorMessage, currentUser, isLoggedIn))(w, r)
+		ServeNode(RoboticsPage(a.name, posts, statusMessage, errorMessage, currentUser, isLoggedIn))(w, r)
 	}
 }
 
-func (a *RoboticsApp) currentUser(r *http.Request) (*auth.User, bool) {
+func (a *App) currentUser(r *http.Request) (*auth.User, bool) {
 	if a.auth == nil {
 		return nil, false
 	}
 	return a.auth.CurrentUser(r)
 }
 
-func RoboticsPage(posts []*Post, statusMessage, errorMessage string, currentUser *auth.User, isLoggedIn bool) *Node {
+func RoboticsPage(page string, posts []*Post, statusMessage, errorMessage string, currentUser *auth.User, isLoggedIn bool) *Node {
 	subtitle := "Recent updates from the Orcas Makers robotics team."
 	composer := Nil()
 	feedback := Nil()
 	accountLabel := Nil()
 	if isLoggedIn {
 		subtitle = "Create a post with text and one or more images."
-		composer = RoboticsCreatePostForm()
-		feedback = RoboticsFeedback(statusMessage, errorMessage)
+		composer = CreatePostForm(page)
+		feedback = Feedback(page,statusMessage, errorMessage)
 		if currentUser != nil {
 			accountLabel = P(Class("text-sm text-base-content/70"), T("Signed in as "+currentUser.Email))
 		}
@@ -83,16 +85,16 @@ func RoboticsPage(posts []*Post, statusMessage, errorMessage string, currentUser
 					feedback,
 					composer,
 				),
-				RoboticsPostsFeed(posts, isLoggedIn),
+				PostsFeed(page, posts, isLoggedIn),
 			),
 		),
 	)
 }
 
-func RoboticsPostsFeed(posts []*Post, canCreate bool) *Node {
+func PostsFeed(page string, posts []*Post, canCreate bool) *Node {
 	cards := make([]*Node, 0, len(posts))
 	for _, post := range posts {
-		cards = append(cards, RoboticsPostCard(post))
+		cards = append(cards, PostCard(page, post))
 	}
 
 	emptyText := "No posts yet."
@@ -109,7 +111,7 @@ func RoboticsPostsFeed(posts []*Post, canCreate bool) *Node {
 	}
 
 	return Div(
-		Id("robotics-posts"),
+		Id(page+"-posts"),
 		Class("space-y-4"),
 		Ch(cards),
 	)

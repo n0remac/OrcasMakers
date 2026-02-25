@@ -14,17 +14,17 @@ import (
 )
 
 const (
-	maxRoboticsUploadSizeMB  = 32
-	maxRoboticsImageSizeMB   = 8
-	maxRoboticsImagesPerPost = 10
-	maxRoboticsTextLength    = 5000
+	maxUploadSizeMB  = 32
+	maxImageSizeMB   = 8
+	maxImagesPerPost = 10
+	maxTextLength    = 5000
 )
 
-func (a *RoboticsApp) mountPostRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/robotics/posts", a.createPostHandler())
+func (a *App) mountPostRoutes(mux *http.ServeMux) {
+	mux.HandleFunc(fmt.Sprintf("/%s/posts", a.name), a.createPostHandler())
 }
 
-func (a *RoboticsApp) createPostHandler() http.HandlerFunc {
+func (a *App) createPostHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -49,27 +49,27 @@ func (a *RoboticsApp) createPostHandler() http.HandlerFunc {
 				return
 			}
 			writeHTML(w, http.StatusCreated,
-				RoboticsFeedbackOOB("Post created successfully.", false).Render()+
-					RoboticsPostsFeed(posts, true).Render(),
+				FeedbackOOB(a.name, "Post created successfully.", false).Render()+
+					PostsFeed(a.name, posts, true).Render(),
 			)
 			return
 		}
 
-		http.Redirect(w, r, "/robotics?status="+url.QueryEscape("post created"), http.StatusSeeOther)
+		http.Redirect(w, r, "/"+a.name+"?status="+url.QueryEscape("post created"), http.StatusSeeOther)
 	}
 }
 
-func (a *RoboticsApp) respondUnauthorized(w http.ResponseWriter, r *http.Request) {
+func (a *App) respondUnauthorized(w http.ResponseWriter, r *http.Request) {
 	if isHTMX(r) {
-		writeHTML(w, http.StatusUnauthorized, RoboticsFeedbackOOB("Please log in to create a post.", true).Render())
+		writeHTML(w, http.StatusUnauthorized, FeedbackOOB(a.name, "Please log in to create a post.", true).Render())
 		return
 	}
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-func (a *RoboticsApp) createPostFromRequest(ctx context.Context, w http.ResponseWriter, r *http.Request) (*Post, error) {
-	maxBytes := int64(maxRoboticsUploadSizeMB) * 1024 * 1024
-	maxImageBytes := int64(maxRoboticsImageSizeMB) * 1024 * 1024
+func (a *App) createPostFromRequest(ctx context.Context, w http.ResponseWriter, r *http.Request) (*Post, error) {
+	maxBytes := int64(maxUploadSizeMB) * 1024 * 1024
+	maxImageBytes := int64(maxImageSizeMB) * 1024 * 1024
 	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
 	if err := r.ParseMultipartForm(maxBytes); err != nil {
 		return nil, errors.New("upload failed: request too large or invalid multipart data")
@@ -79,16 +79,16 @@ func (a *RoboticsApp) createPostFromRequest(ctx context.Context, w http.Response
 	if text == "" {
 		return nil, errors.New("post text is required")
 	}
-	if len(text) > maxRoboticsTextLength {
-		return nil, fmt.Errorf("post text must be %d characters or less", maxRoboticsTextLength)
+	if len(text) > maxTextLength {
+		return nil, fmt.Errorf("post text must be %d characters or less", maxTextLength)
 	}
 
 	imageHeaders := r.MultipartForm.File["images"]
 	if len(imageHeaders) == 0 {
 		return nil, errors.New("please upload at least one image")
 	}
-	if len(imageHeaders) > maxRoboticsImagesPerPost {
-		return nil, fmt.Errorf("you can upload up to %d images per post", maxRoboticsImagesPerPost)
+	if len(imageHeaders) > maxImagesPerPost {
+		return nil, fmt.Errorf("you can upload up to %d images per post", maxImagesPerPost)
 	}
 
 	postID, err := generatePostID()
@@ -100,7 +100,7 @@ func (a *RoboticsApp) createPostFromRequest(ctx context.Context, w http.Response
 	for i, header := range imageHeaders {
 		if header.Size > maxImageBytes {
 			a.cleanupImages(ctx, savedPaths)
-			return nil, fmt.Errorf("each image must be %dMB or smaller", maxRoboticsImageSizeMB)
+			return nil, fmt.Errorf("each image must be %dMB or smaller", maxImageSizeMB)
 		}
 
 		file, err := header.Open()
@@ -109,7 +109,7 @@ func (a *RoboticsApp) createPostFromRequest(ctx context.Context, w http.Response
 			return nil, errors.New("failed to read uploaded image")
 		}
 
-		storedPath := buildRoboticsImagePath(postID, header.Filename, i)
+		storedPath := buildImagePath(postID, header.Filename, a.name, i)
 		record, storeErr := a.store.UploadImage(ctx, storedPath, file, header.Header.Get("Content-Type"))
 		_ = file.Close()
 		if storeErr != nil {
@@ -135,48 +135,48 @@ func (a *RoboticsApp) createPostFromRequest(ctx context.Context, w http.Response
 	return post, nil
 }
 
-func (a *RoboticsApp) cleanupImages(ctx context.Context, paths []string) {
+func (a *App) cleanupImages(ctx context.Context, paths []string) {
 	for _, imagePath := range paths {
 		_ = a.store.DeleteImage(ctx, imagePath)
 	}
 }
 
-func (a *RoboticsApp) respondPostError(w http.ResponseWriter, r *http.Request, err error) {
+func (a *App) respondPostError(w http.ResponseWriter, r *http.Request, err error) {
 	if isHTMX(r) {
-		writeHTML(w, http.StatusBadRequest, RoboticsFeedbackOOB(err.Error(), true).Render())
+		writeHTML(w, http.StatusBadRequest, FeedbackOOB(a.name, err.Error(), true).Render())
 		return
 	}
-	http.Redirect(w, r, "/robotics?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
+	http.Redirect(w, r, "/"+a.name+"?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
 }
 
-func RoboticsCreatePostForm() *Node {
+func CreatePostForm(page string) *Node {
 	return Form(
 		Method("POST"),
-		Action("/robotics/posts"),
+		Action("/"+page+"/posts"),
 		Attr("enctype", "multipart/form-data"),
-		Attr("hx-post", "/robotics/posts"),
+		Attr("hx-post", "/"+page+"/posts"),
 		Attr("hx-encoding", "multipart/form-data"),
-		Attr("hx-target", "#robotics-posts"),
+		Attr("hx-target", "#"+page+"-posts"),
 		Attr("hx-swap", "outerHTML"),
 		Attr("hx-on::after-request", "if(event.detail.successful){ this.reset(); }"),
 		Class("space-y-3"),
 		Div(
 			Class("space-y-2"),
-			Label(For("robotics-text"), Class("font-medium"), T("Post Text")),
+			Label(For(page+"-text"), Class("font-medium"), T("Post Text")),
 			TextArea(
-				Id("robotics-text"),
+				Id(page+"-text"),
 				Name("text"),
 				Rows(5),
 				Attr("required", "required"),
-				Placeholder("Share what your robotics team is building..."),
+				Placeholder("Enter your post text here..."),
 				Class("textarea textarea-bordered w-full"),
 			),
 		),
 		Div(
 			Class("space-y-2"),
-			Label(For("robotics-images"), Class("font-medium"), T("Images")),
+			Label(For(page+"-images"), Class("font-medium"), T("Images")),
 			Input(
-				Id("robotics-images"),
+				Id(page+"-images"),
 				Type("file"),
 				Name("images"),
 				Attr("accept", "image/*"),
@@ -186,7 +186,7 @@ func RoboticsCreatePostForm() *Node {
 			),
 			P(
 				Class("text-xs text-base-content/70"),
-				T(fmt.Sprintf("Upload up to %d images, %dMB each.", maxRoboticsImagesPerPost, maxRoboticsImageSizeMB)),
+				T(fmt.Sprintf("Upload up to %d images, %dMB each.", maxImagesPerPost, maxImageSizeMB)),
 			),
 		),
 		Button(
@@ -197,13 +197,13 @@ func RoboticsCreatePostForm() *Node {
 	)
 }
 
-func RoboticsFeedbackOOB(message string, isError bool) *Node {
+func FeedbackOOB(page, message string, isError bool) *Node {
 	klass := "alert alert-success"
 	if isError {
 		klass = "alert alert-error"
 	}
 	return Div(
-		Id("robotics-feedback"),
+		Id(page+"-feedback"),
 		Attr("hx-swap-oob", "outerHTML"),
 		Class(klass),
 		T(message),
@@ -220,7 +220,7 @@ func writeHTML(w http.ResponseWriter, status int, content string) {
 	_, _ = w.Write([]byte(content))
 }
 
-func buildRoboticsImagePath(postID, filename string, index int) string {
+func buildImagePath(postID, filename, page string, index int) string {
 	base := filepath.Base(strings.TrimSpace(filename))
 	if base == "" || base == "." {
 		base = fmt.Sprintf("image-%d", index+1)
@@ -236,7 +236,7 @@ func buildRoboticsImagePath(postID, filename string, index int) string {
 		ext = ".img"
 	}
 
-	return fmt.Sprintf("robotics/%s/%d-%s%s", postID, time.Now().UnixNano(), slug, ext)
+	return fmt.Sprintf("%s/%s/%d-%s%s", page, postID, time.Now().UnixNano(), slug, ext)
 }
 
 func slugFilename(input string) string {
@@ -270,7 +270,7 @@ func slugFilename(input string) string {
 	return out
 }
 
-func RoboticsPostCard(post *Post) *Node {
+func PostCard(page string, post *Post) *Node {
 	images := make([]*Node, 0, len(post.ImagePaths))
 	for _, imagePath := range post.ImagePaths {
 		images = append(images,
@@ -278,7 +278,7 @@ func RoboticsPostCard(post *Post) *Node {
 				Class("overflow-hidden rounded-lg bg-base-300"),
 				Img(
 					Src("/images/"+imagePath),
-					Alt("Robotics post image"),
+					Alt(page+" post image"),
 					Class("h-56 w-full object-cover"),
 				),
 			),
@@ -296,20 +296,20 @@ func RoboticsPostCard(post *Post) *Node {
 	)
 }
 
-func RoboticsFeedback(statusMessage, errorMessage string) *Node {
+func Feedback(page string, statusMessage, errorMessage string) *Node {
 	if strings.TrimSpace(errorMessage) != "" {
 		return Div(
-			Id("robotics-feedback"),
+			Id(page+"-feedback"),
 			Class("alert alert-error"),
 			T(errorMessage),
 		)
 	}
 	if strings.TrimSpace(statusMessage) != "" {
 		return Div(
-			Id("robotics-feedback"),
+			Id(page+"-feedback"),
 			Class("alert alert-success"),
 			T(statusMessage),
 		)
 	}
-	return Div(Id("robotics-feedback"))
+	return Div(Id(page+"-feedback"))
 }
