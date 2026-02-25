@@ -17,6 +17,7 @@ const postPrefix = "post:"
 
 type Post struct {
 	ID         string    `json:"id"`
+	Page       string    `json:"page,omitempty"`
 	Text       string    `json:"text"`
 	ImagePaths []string  `json:"image_paths"`
 	CreatedAt  time.Time `json:"created_at"`
@@ -31,9 +32,13 @@ func NewPostStore(ds *database.DocumentStore) *PostStore {
 	return &PostStore{ds: ds}
 }
 
-func (s *PostStore) CreatePost(ctx context.Context, postID, text string, imagePaths []string) (*Post, error) {
+func (s *PostStore) CreatePost(ctx context.Context, page, postID, text string, imagePaths []string) (*Post, error) {
 	if s == nil || s.ds == nil {
 		return nil, errors.New("post store not initialized")
+	}
+	page = normalizePageName(page)
+	if page == "" {
+		return nil, errors.New("post page is required")
 	}
 
 	postID = strings.TrimSpace(postID)
@@ -48,6 +53,7 @@ func (s *PostStore) CreatePost(ctx context.Context, postID, text string, imagePa
 	now := time.Now().UTC()
 	post := &Post{
 		ID:         postID,
+		Page:       page,
 		Text:       strings.TrimSpace(text),
 		ImagePaths: append([]string(nil), imagePaths...),
 		CreatedAt:  now,
@@ -68,9 +74,18 @@ func (s *PostStore) CreatePost(ctx context.Context, postID, text string, imagePa
 }
 
 func (s *PostStore) ListPosts(ctx context.Context) ([]*Post, error) {
+	return s.listPosts(ctx, "")
+}
+
+func (s *PostStore) ListPostsByPage(ctx context.Context, page string) ([]*Post, error) {
+	return s.listPosts(ctx, page)
+}
+
+func (s *PostStore) listPosts(ctx context.Context, page string) ([]*Post, error) {
 	if s == nil || s.ds == nil {
 		return nil, errors.New("post store not initialized")
 	}
+	page = normalizePageName(page)
 
 	ids, err := s.ds.List(ctx)
 	if err != nil {
@@ -100,6 +115,9 @@ func (s *PostStore) ListPosts(ctx context.Context) ([]*Post, error) {
 		if post.ImagePaths == nil {
 			post.ImagePaths = []string{}
 		}
+		if page != "" && !postMatchesPage(&post, page) {
+			continue
+		}
 		posts = append(posts, &post)
 	}
 
@@ -107,6 +125,20 @@ func (s *PostStore) ListPosts(ctx context.Context) ([]*Post, error) {
 		return posts[i].CreatedAt.After(posts[j].CreatedAt)
 	})
 	return posts, nil
+}
+
+func postMatchesPage(post *Post, page string) bool {
+	if post == nil {
+		return false
+	}
+	if page == "" {
+		return true
+	}
+	return normalizePageName(post.Page) == page
+}
+
+func normalizePageName(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }
 
 func postDocumentID(postID string) string {

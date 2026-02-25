@@ -37,27 +37,30 @@ func HomePage(websocketRegistry *CommandRegistry) *Node {
 		}),
 			NavBar(),
 			Div(
-				T("Welcome to the Orcas Makers Home Page!"),
+				H1(T("Welcome to the Orcas Makers Home Page!")),
 			),
-			Div(Id("test-message")),
-			Form(
-				Attr("ws-send", "submit"),
-				Input(
-					Type("hidden"),
-					Name("type"),
-					Value("test"),
-				),
-				Input(
-					Type("hidden"),
-					Name("test"),
-					Value("test"),
-				),
-				Input(
-					Type("submit"),
-					Class("btn btn-primary w-32"),
-					Value("Test Websocket"),
-				),
+			Div(
+				T("We are an up and coming maker group on Orcas Island, WA. We have passions for robotics, wearable technology, and building quirky projects that create weirder and stronger communities."),
 			),
+			// Div(Id("test-message")),
+			// Form(
+			// 	Attr("ws-send", "submit"),
+			// 	Input(
+			// 		Type("hidden"),
+			// 		Name("type"),
+			// 		Value("test"),
+			// 	),
+			// 	Input(
+			// 		Type("hidden"),
+			// 		Name("test"),
+			// 		Value("test"),
+			// 	),
+			// 	Input(
+			// 		Type("submit"),
+			// 		Class("btn btn-primary w-32"),
+			// 		Value("Test Websocket"),
+			// 	),
+			// ),
 		),
 	)
 }
@@ -67,6 +70,12 @@ func NavBar() *Node {
 		Div(Class("container mx-auto flex justify-center"),
 			Ul(Class("flex space-x-6"),
 				Li(A(Href("/robotics"), T("Robotics"))),
+				Li(A(Href("/software"), T("Software"))),
+				Li(A(Href("/art"), T("Art"))),
+			),
+			Div(Class("flex-1")),
+			Div(Class("flex items-center gap-4"),
+				A(Href("/login"), Class("btn btn-sm"), T("login")),
 			),
 		),
 	)

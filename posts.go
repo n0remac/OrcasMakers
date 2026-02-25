@@ -43,7 +43,7 @@ func (a *App) createPostHandler() http.HandlerFunc {
 		}
 
 		if isHTMX(r) {
-			posts, err := a.posts.ListPosts(ctx)
+			posts, err := a.posts.ListPostsByPage(ctx, a.name)
 			if err != nil {
 				a.respondPostError(w, r, errors.New("post created, but feed reload failed"))
 				return
@@ -124,7 +124,7 @@ func (a *App) createPostFromRequest(ctx context.Context, w http.ResponseWriter, 
 		savedPaths = append(savedPaths, record.Path)
 	}
 
-	post, err := a.posts.CreatePost(ctx, postID, text, savedPaths)
+	post, err := a.posts.CreatePost(ctx, a.name, postID, text, savedPaths)
 	if err != nil {
 		a.cleanupImages(ctx, savedPaths)
 		return nil, errors.New("failed to save post")

@@ -24,18 +24,40 @@ func Robotics(mux *http.ServeMux, store *database.DocumentStore, authApp *auth.A
 		posts: NewPostStore(store),
 		auth:  authApp,
 	}
-	mux.HandleFunc("/"+app.name, app.roboticsPageHandler())
+	mux.HandleFunc("/"+app.name, app.PageHandler("Recent updates from the Orcas Makers robotics team.", "Robotics"))
 	app.mountPostRoutes(mux)
 }
 
-func (a *App) roboticsPageHandler() http.HandlerFunc {
+func Software(mux *http.ServeMux, store *database.DocumentStore, authApp *auth.AuthApp) {
+	app := &App{
+		name:  "software",
+		store: store,
+		posts: NewPostStore(store),
+		auth:  authApp,
+	}
+	mux.HandleFunc("/"+app.name, app.PageHandler("Recent updates from the Orcas Makers software team.", "Software"))
+	app.mountPostRoutes(mux)
+}
+
+func Art(mux *http.ServeMux, store *database.DocumentStore, authApp *auth.AuthApp) {
+	app := &App{
+		name:  "art",
+		store: store,
+		posts: NewPostStore(store),
+		auth:  authApp,
+	}
+	mux.HandleFunc("/"+app.name, app.PageHandler("Recent updates from the Orcas Makers art team.", "Art"))
+	app.mountPostRoutes(mux)
+}
+
+func (a *App) PageHandler(subtitle, title string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
-		posts, err := a.posts.ListPosts(context.Background())
+		posts, err := a.posts.ListPostsByPage(context.Background(), a.name)
 		if err != nil {
 			http.Error(w, "failed to load posts", http.StatusInternalServerError)
 			return
@@ -44,7 +66,7 @@ func (a *App) roboticsPageHandler() http.HandlerFunc {
 
 		statusMessage := strings.TrimSpace(r.URL.Query().Get("status"))
 		errorMessage := strings.TrimSpace(r.URL.Query().Get("error"))
-		ServeNode(RoboticsPage(a.name, posts, statusMessage, errorMessage, currentUser, isLoggedIn))(w, r)
+		ServeNode(Page(a.name, subtitle, title, posts, statusMessage, errorMessage, currentUser, isLoggedIn))(w, r)
 	}
 }
 
@@ -55,8 +77,7 @@ func (a *App) currentUser(r *http.Request) (*auth.User, bool) {
 	return a.auth.CurrentUser(r)
 }
 
-func RoboticsPage(page string, posts []*Post, statusMessage, errorMessage string, currentUser *auth.User, isLoggedIn bool) *Node {
-	subtitle := "Recent updates from the Orcas Makers robotics team."
+func Page(page string, subtitle string, title string, posts []*Post, statusMessage, errorMessage string, currentUser *auth.User, isLoggedIn bool) *Node {
 	composer := Nil()
 	feedback := Nil()
 	accountLabel := Nil()
@@ -79,7 +100,7 @@ func RoboticsPage(page string, posts []*Post, statusMessage, errorMessage string
 				Class("w-full max-w-6xl px-4 py-6 space-y-6"),
 				Div(
 					Class("card bg-base-200 p-6 space-y-4"),
-					H1(Class("text-2xl font-bold"), T("Robotics")),
+					H1(Class("text-2xl font-bold"), T(title)),
 					P(Class("text-base-content/70"), T(subtitle)),
 					accountLabel,
 					feedback,
@@ -99,7 +120,7 @@ func PostsFeed(page string, posts []*Post, canCreate bool) *Node {
 
 	emptyText := "No posts yet."
 	if canCreate {
-		emptyText = "No posts yet. Create the first robotics post above."
+		emptyText = "No posts yet. Create the first post above."
 	}
 	if len(cards) == 0 {
 		cards = append(cards,
