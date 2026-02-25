@@ -72,6 +72,7 @@ func NavBar() *Node {
 				Li(A(Href("/robotics"), T("Robotics"))),
 				Li(A(Href("/software"), T("Software"))),
 				Li(A(Href("/art"), T("Art"))),
+				Li(A(Href("/design"), T("Design"))),
 			),
 			Div(Class("flex-1")),
 			Div(Class("flex items-center gap-4"),

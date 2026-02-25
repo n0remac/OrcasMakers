@@ -24,6 +24,7 @@ func main() {
 	Robotics(mux, ds, authApp)
 	Software(mux, ds, authApp)
 	Art(mux, ds, authApp)
+	Design(mux, ds, authApp)
 
 	go ws.WsHub.Run()
 	log.Printf("Starting server on %s", webPort)

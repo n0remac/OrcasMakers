@@ -50,6 +50,17 @@ func Art(mux *http.ServeMux, store *database.DocumentStore, authApp *auth.AuthAp
 	app.mountPostRoutes(mux)
 }
 
+func Design(mux *http.ServeMux, store *database.DocumentStore, authApp *auth.AuthApp) {
+	app := &App{
+		name:  "design",
+		store: store,
+		posts: NewPostStore(store),
+		auth:  authApp,
+	}
+	mux.HandleFunc("/"+app.name, app.PageHandler("Recent updates from the Orcas Makers design team.", "Design"))
+	app.mountPostRoutes(mux)
+}
+
 func (a *App) PageHandler(subtitle, title string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
