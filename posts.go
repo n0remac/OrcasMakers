@@ -84,9 +84,6 @@ func (a *App) createPostFromRequest(ctx context.Context, w http.ResponseWriter, 
 	}
 
 	imageHeaders := r.MultipartForm.File["images"]
-	if len(imageHeaders) == 0 {
-		return nil, errors.New("please upload at least one image")
-	}
 	if len(imageHeaders) > maxImagesPerPost {
 		return nil, fmt.Errorf("you can upload up to %d images per post", maxImagesPerPost)
 	}
@@ -181,12 +178,11 @@ func CreatePostForm(page string) *Node {
 				Name("images"),
 				Attr("accept", "image/*"),
 				Attr("multiple", "multiple"),
-				Attr("required", "required"),
 				Class("file-input file-input-bordered w-full"),
 			),
 			P(
 				Class("text-xs text-base-content/70"),
-				T(fmt.Sprintf("Upload up to %d images, %dMB each.", maxImagesPerPost, maxImageSizeMB)),
+				T(fmt.Sprintf("Optional: upload up to %d images, %dMB each.", maxImagesPerPost, maxImageSizeMB)),
 			),
 		),
 		Button(
@@ -285,10 +281,15 @@ func PostCard(page string, post *Post) *Node {
 		)
 	}
 
+	imageGrid := Nil()
+	if len(images) > 0 {
+		imageGrid = Div(Class("grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"), Ch(images))
+	}
+
 	return Div(
 		Class("card bg-base-200 p-6 space-y-4"),
 		P(Class("whitespace-pre-wrap"), T(post.Text)),
-		Div(Class("grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"), Ch(images)),
+		imageGrid,
 		P(
 			Class("text-xs text-base-content/60"),
 			T("Posted "+post.CreatedAt.Local().Format(time.RFC1123)),
@@ -311,5 +312,5 @@ func Feedback(page string, statusMessage, errorMessage string) *Node {
 			T(statusMessage),
 		)
 	}
-	return Div(Id(page+"-feedback"))
+	return Div(Id(page + "-feedback"))
 }

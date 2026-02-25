@@ -11,7 +11,7 @@ import (
 )
 
 type App struct {
-	name string
+	name  string
 	store *database.DocumentStore
 	posts *PostStore
 	auth  *auth.AuthApp
@@ -61,9 +61,9 @@ func RoboticsPage(page string, posts []*Post, statusMessage, errorMessage string
 	feedback := Nil()
 	accountLabel := Nil()
 	if isLoggedIn {
-		subtitle = "Create a post with text and one or more images."
+		subtitle = "Create a post with text and optional images."
 		composer = CreatePostForm(page)
-		feedback = Feedback(page,statusMessage, errorMessage)
+		feedback = Feedback(page, statusMessage, errorMessage)
 		if currentUser != nil {
 			accountLabel = P(Class("text-sm text-base-content/70"), T("Signed in as "+currentUser.Email))
 		}
