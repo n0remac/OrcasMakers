@@ -42,25 +42,25 @@ func HomePage(websocketRegistry *CommandRegistry) *Node {
 			Div(
 				T("We are an up and coming maker group on Orcas Island, WA. We have passions for robotics, wearable technology, and building quirky projects that create weirder and stronger communities."),
 			),
-			// Div(Id("test-message")),
-			// Form(
-			// 	Attr("ws-send", "submit"),
-			// 	Input(
-			// 		Type("hidden"),
-			// 		Name("type"),
-			// 		Value("test"),
-			// 	),
-			// 	Input(
-			// 		Type("hidden"),
-			// 		Name("test"),
-			// 		Value("test"),
-			// 	),
-			// 	Input(
-			// 		Type("submit"),
-			// 		Class("btn btn-primary w-32"),
-			// 		Value("Test Websocket"),
-			// 	),
-			// ),
+			Div(Id("test-message")),
+			Form(
+				Attr("ws-send", "submit"),
+				Input(
+					Type("hidden"),
+					Name("type"),
+					Value("test"),
+				),
+				Input(
+					Type("hidden"),
+					Name("test"),
+					Value("test"),
+				),
+				Input(
+					Type("submit"),
+					Class("btn btn-primary w-32"),
+					Value("Test Websocket"),
+				),
+			),
 		),
 	)
 }
@@ -69,6 +69,7 @@ func NavBar() *Node {
 	return Nav(Class("bg-base-300 p-4 w-full"),
 		Div(Class("container mx-auto flex justify-center"),
 			Ul(Class("flex space-x-6"),
+				Li(A(Href("/robot"), T("Robot"))),
 				Li(A(Href("/robotics"), T("Robotics"))),
 				Li(A(Href("/software"), T("Software"))),
 				Li(A(Href("/art"), T("Art"))),
