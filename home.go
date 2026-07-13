@@ -70,6 +70,7 @@ func NavBar() *Node {
 		Div(Class("container mx-auto flex justify-center"),
 			Ul(Class("flex space-x-6"),
 				Li(A(Href("/robot"), T("Robot"))),
+				Li(A(Href("/car"), T("Car"))),
 				Li(A(Href("/robotics"), T("Robotics"))),
 				Li(A(Href("/software"), T("Software"))),
 				Li(A(Href("/art"), T("Art"))),

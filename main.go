@@ -22,6 +22,7 @@ func main() {
 
 	Home(mux, registry)
 	Robot(mux)
+	Car(mux, authApp)
 	Robotics(mux, ds, authApp)
 	Software(mux, ds, authApp)
 	Art(mux, ds, authApp)
