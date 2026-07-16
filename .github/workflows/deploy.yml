@@ -38,6 +38,11 @@ jobs:
           ssh "${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}" << 'EOF'
           set -euo pipefail
 
+          if [[ ! -w /srv/orcasmakers/app ]]; then
+            echo "deploy user cannot write to /srv/orcasmakers/app" >&2
+            exit 1
+          fi
+
           install -m 0755 /tmp/orcasmakers /srv/orcasmakers/app/orcasmakers
 
           rm -rf /srv/orcasmakers/app/open-sauce-media.next
@@ -51,6 +56,5 @@ jobs:
           mv /srv/orcasmakers/app/open-sauce-media.next /srv/orcasmakers/app/open-sauce-media
           rm -rf /srv/orcasmakers/app/open-sauce-media.previous
 
-          systemctl daemon-reload
-          systemctl restart orcasmakers
+          sudo -n /usr/bin/systemctl restart orcasmakers.service
           EOF

@@ -10,6 +10,52 @@ media slideshows. Images and videos are stored by project in
 The media directory is deployed beside the application binary. Keep that
 directory present when running a packaged binary outside this repository.
 
+## Deployment
+
+Pushes to `main` build the Linux binary, package `open-sauce-media/`, and deploy
+both to `/srv/orcasmakers/app`. Configure `DROPLET_HOST`, `DROPLET_USER`, and
+`DROPLET_SSH_KEY` as GitHub Actions secrets.
+
+The SSH deploy user must own the application directory so binary and media
+updates do not require root privileges. Replace the placeholders with the
+account and its primary group:
+
+```bash
+sudo chown -R <deploy-user>:<deploy-group> /srv/orcasmakers/app
+sudo chmod 0755 /srv/orcasmakers/app
+```
+
+The workflow only needs elevated privileges to restart the existing systemd
+service. Create a command-specific sudoers entry:
+
+```bash
+sudo visudo -f /etc/sudoers.d/orcasmakers-deploy
+```
+
+Add:
+
+```sudoers
+<deploy-user> ALL=(root) NOPASSWD: /usr/bin/systemctl restart orcasmakers.service
+```
+
+Secure and validate the entry:
+
+```bash
+sudo chmod 0440 /etc/sudoers.d/orcasmakers-deploy
+sudo visudo -cf /etc/sudoers.d/orcasmakers-deploy
+```
+
+From a login shell for the deploy user, verify both required permissions before
+running the workflow:
+
+```bash
+test -w /srv/orcasmakers/app
+sudo -n /usr/bin/systemctl restart orcasmakers.service
+```
+
+The deployment does not run `systemctl daemon-reload` because it does not modify
+the service unit.
+
 The robot controller is available at `/robot`. The Raspberry Pi connects to
 `/ws/robot` and sends camera frames while receiving control messages, so the Pi
 does not need to expose a web server to the internet. The controller and camera
