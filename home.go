@@ -69,6 +69,7 @@ func NavBar() *Node {
 	return Nav(Class("bg-base-300 p-4 w-full"),
 		Div(Class("container mx-auto flex justify-center"),
 			Ul(Class("flex space-x-6"),
+				Li(A(Href("/open-sauce"), T("Open Sauce"))),
 				Li(A(Href("/robot"), T("Robot"))),
 				Li(A(Href("/car"), T("Car"))),
 				Li(A(Href("/robotics"), T("Robotics"))),

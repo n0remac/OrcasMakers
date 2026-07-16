@@ -19,6 +19,7 @@ jobs:
         run: |
           mkdir -p dist
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o dist/orcasmakers .
+          tar -cf dist/open-sauce-media.tar open-sauce-media
 
       - name: Install SSH key
         run: |
@@ -30,6 +31,7 @@ jobs:
       - name: Upload binary
         run: |
           scp dist/orcasmakers "${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:/tmp/orcasmakers"
+          scp dist/open-sauce-media.tar "${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:/tmp/open-sauce-media.tar"
 
       - name: Activate + restart
         run: |
@@ -37,6 +39,18 @@ jobs:
           set -euo pipefail
 
           sudo install -o orcasmakers -g orcasmakers -m 0755 /tmp/orcasmakers /srv/orcasmakers/app/orcasmakers
+
+          sudo rm -rf /srv/orcasmakers/app/open-sauce-media.next
+          sudo mkdir -p /srv/orcasmakers/app/open-sauce-media.next
+          sudo tar -xf /tmp/open-sauce-media.tar -C /srv/orcasmakers/app/open-sauce-media.next --strip-components=1
+          sudo chown -R orcasmakers:orcasmakers /srv/orcasmakers/app/open-sauce-media.next
+
+          sudo rm -rf /srv/orcasmakers/app/open-sauce-media.previous
+          if [[ -d /srv/orcasmakers/app/open-sauce-media ]]; then
+            sudo mv /srv/orcasmakers/app/open-sauce-media /srv/orcasmakers/app/open-sauce-media.previous
+          fi
+          sudo mv /srv/orcasmakers/app/open-sauce-media.next /srv/orcasmakers/app/open-sauce-media
+          sudo rm -rf /srv/orcasmakers/app/open-sauce-media.previous
 
           sudo systemctl daemon-reload
           sudo systemctl restart orcasmakers

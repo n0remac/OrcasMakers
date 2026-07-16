@@ -21,6 +21,7 @@ func main() {
 	defer cleanup()
 
 	Home(mux, registry)
+	OpenSauce(mux)
 	Robot(mux)
 	Car(mux, authApp)
 	Robotics(mux, ds, authApp)

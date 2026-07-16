@@ -1,5 +1,15 @@
 # OrcasMakers
 
+## Open Sauce project board
+
+The Open Sauce showcase is available at `/open-sauce`. It displays the RC
+truck, RedBot, Solar Hat, CoolerMobile, and Bike Trailer projects in automatic
+media slideshows. Images and videos are stored by project in
+`open-sauce-media/` and served beneath `/open-sauce/media/`.
+
+The media directory is deployed beside the application binary. Keep that
+directory present when running a packaged binary outside this repository.
+
 The robot controller is available at `/robot`. The Raspberry Pi connects to
 `/ws/robot` and sends camera frames while receiving control messages, so the Pi
 does not need to expose a web server to the internet. The controller and camera

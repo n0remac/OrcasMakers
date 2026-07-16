@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,10 +12,58 @@ import (
 
 func TestRobotPageContainsControls(t *testing.T) {
 	page := RobotPage().Render()
-	for _, want := range []string{"Robot Control", `data-key="w"`, "/robot/stream", "/robot/app.js"} {
+	for _, want := range []string{
+		"Robot Control",
+		`data-key="w"`,
+		`id="mobile-robot-controls"`,
+		`id="move-joystick"`,
+		`id="claw-joystick"`,
+		`id="camera-joystick"`,
+		`aria-label="Open claw"`,
+		`aria-label="Close claw"`,
+		`id="mobile-control-space"`,
+		`id="desktop-robot-controls"`,
+		`@media (pointer: coarse) and (orientation: portrait)`,
+		`@media (pointer: coarse) and (orientation: landscape)`,
+		`env(safe-area-inset-bottom)`,
+		"/robot/stream",
+		"/robot/app.js",
+	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("robot page does not contain %q", want)
 		}
+	}
+	if strings.Contains(page, "robot-controller-qr") {
+		t.Error("robot page must not display the controller QR code")
+	}
+	if !strings.Contains(robotAppJS, `window.addEventListener('orientationchange', releaseAll)`) {
+		t.Error("robot controls must release when the device orientation changes")
+	}
+	if !strings.Contains(robotAppJS, "viewport-fit=cover") {
+		t.Error("robot controls must opt into viewport safe-area insets")
+	}
+}
+
+func TestRobotControllerQR(t *testing.T) {
+	mux := http.NewServeMux()
+	Robot(mux)
+
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/robot/controller-qr.png", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("QR status = %d", response.Code)
+	}
+	if got := response.Header().Get("Content-Type"); got != "image/png" {
+		t.Fatalf("QR content type = %q", got)
+	}
+	if !bytes.Equal(response.Body.Bytes(), robotControllerQR) {
+		t.Fatal("QR response does not match the embedded image")
+	}
+
+	post := httptest.NewRecorder()
+	mux.ServeHTTP(post, httptest.NewRequest(http.MethodPost, "/robot/controller-qr.png", nil))
+	if post.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("QR POST status = %d", post.Code)
 	}
 }
 

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"crypto/subtle"
+	_ "embed"
 	"fmt"
 	"io"
 	"log"
@@ -16,6 +18,9 @@ import (
 )
 
 const maxRobotFrameSize = 16 << 20
+
+//go:embed robotcontroller.png
+var robotControllerQR []byte
 
 type robotRelay struct {
 	mu sync.RWMutex
@@ -43,6 +48,7 @@ var robotUpgrader = websocket.Upgrader{
 func Robot(mux *http.ServeMux) {
 	mux.HandleFunc("/robot", ServeNode(RobotPage()))
 	mux.HandleFunc("/robot/app.js", serveRobotApp)
+	mux.HandleFunc("/robot/controller-qr.png", serveRobotControllerQR)
 	mux.HandleFunc("/robot/stream", robots.serveStream)
 	mux.HandleFunc("/ws/robot", robots.handleRobot)
 	mux.HandleFunc("/ws/robot-control", robots.handleController)
@@ -54,6 +60,29 @@ func RobotPage() *Node {
 			Attr("data-key", key),
 			Class("btn btn-square btn-lg select-none touch-none"),
 			T(label),
+		)
+	}
+	mobileButton := func(key, label, ariaLabel string) *Node {
+		return Button(
+			Attr("data-key", key),
+			AriaLabel(ariaLabel),
+			Class("robot-claw-button h-12 w-12 shrink-0 touch-none select-none rounded-full border border-white/60 bg-black/20 text-[10px] font-bold uppercase text-white shadow-lg backdrop-blur-sm"),
+			T(label),
+		)
+	}
+	joystick := func(id, label, up, left, down, right string) *Node {
+		return Div(
+			Id(id),
+			Attr("data-joystick", ""),
+			Attr("data-up", up),
+			Attr("data-left", left),
+			Attr("data-down", down),
+			Attr("data-right", right),
+			Attr("role", "group"),
+			AriaLabel(label+" joystick"),
+			Class("robot-joystick relative h-20 w-20 touch-none select-none rounded-full border-2 border-white/60 bg-black/15 shadow-lg backdrop-blur-[1px]"),
+			Span(Class("pointer-events-none absolute inset-x-0 top-1 text-center text-[10px] font-bold uppercase tracking-wide text-white/90"), T(label)),
+			Span(Attr("data-joystick-stick", ""), Class("pointer-events-none absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70 bg-white/35 shadow-md")),
 		)
 	}
 	empty := func() *Node { return Span(Class("w-16")) }
@@ -69,17 +98,28 @@ func RobotPage() *Node {
 	}
 
 	return DefaultLayout(
-		Div(Class("min-h-screen bg-base-100"),
+		Div(Id("robot-page"), Class("min-h-screen bg-base-100"),
 			NavBar(),
-			Main(Class("mx-auto w-full max-w-5xl space-y-6 p-4 md:p-6"),
-				Div(Class("flex items-center justify-between gap-4"),
+			Main(Id("robot-main"), Class("mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:p-6"),
+				Div(Id("robot-header"), Class("flex items-center justify-between gap-4"),
 					H1(Class("text-2xl font-bold"), T("Robot Control")),
 					Span(Id("robot-status"), Class("text-warning"), T("Connecting…")),
 				),
-				Div(Class("grid min-h-60 place-items-center overflow-hidden rounded-box border border-base-300 bg-base-200"),
+				Div(Id("robot-video"), Class("relative grid min-h-60 place-items-center overflow-hidden rounded-box border border-base-300 bg-base-200"),
 					Img(Src("/robot/stream"), Alt("Robot camera stream"), Class("aspect-4/3 w-full max-w-3xl object-contain")),
 				),
-				Div(Class("grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4"),
+				Div(
+					Id("mobile-robot-controls"),
+					joystick("move-joystick", "Move", "w", "a", "s", "d"),
+					Div(Class("robot-claw-controls flex items-center gap-1"),
+						mobileButton("r", "Open", "Open claw"),
+						joystick("claw-joystick", "Claw", "t", "f", "g", "h"),
+						mobileButton("y", "Close", "Close claw"),
+					),
+					joystick("camera-joystick", "Camera", "i", "j", "k", "l"),
+				),
+				Div(Id("mobile-control-space"), AriaHidden("true")),
+				Div(Id("desktop-robot-controls"), Class("grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4"),
 					pad("Move", "w", "a", "s", "d"),
 					pad("Claw", "t", "f", "g", "h"),
 					Section(Class("space-y-3 text-center"),
@@ -90,8 +130,138 @@ func RobotPage() *Node {
 				),
 			),
 		),
+		Style(Raw(robotControlCSS)),
 		Script(Src("/robot/app.js")),
 	)
+}
+
+const robotControlCSS = `
+#mobile-robot-controls,
+#mobile-control-space {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  #desktop-robot-controls {
+    display: none !important;
+  }
+
+  #mobile-robot-controls {
+    --robot-control-size: clamp(3.5rem, 20vw, 5rem);
+    --robot-button-size: clamp(2.25rem, 11vw, 3rem);
+    align-items: flex-start;
+    bottom: 0;
+    box-sizing: border-box;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: space-between;
+    left: 0;
+    padding: 0.5rem max(0.5rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+    position: fixed;
+    right: 0;
+    z-index: 30;
+  }
+
+  #mobile-robot-controls .robot-joystick {
+    height: var(--robot-control-size) !important;
+    width: var(--robot-control-size) !important;
+  }
+
+  #mobile-robot-controls [data-joystick-stick] {
+    height: 40%;
+    width: 40%;
+  }
+
+  #mobile-robot-controls .robot-claw-button {
+    height: var(--robot-button-size) !important;
+    width: var(--robot-button-size) !important;
+  }
+
+  #mobile-robot-controls .robot-claw-controls {
+    flex-shrink: 0;
+  }
+}
+
+@media (pointer: coarse) and (orientation: portrait) {
+  #robot-page {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+
+  #robot-main {
+    display: grid;
+    flex: 1;
+    gap: 1rem;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    min-height: 0;
+  }
+
+  #robot-video {
+    min-height: 0;
+  }
+
+  #robot-video img {
+    height: 100%;
+    max-width: none;
+    object-fit: contain;
+    width: 100%;
+  }
+
+  #mobile-control-space {
+    display: block;
+    height: calc(clamp(3.5rem, 20vw, 5rem) + 0.5rem + max(0.5rem, env(safe-area-inset-bottom)));
+  }
+}
+
+@media (pointer: coarse) and (orientation: landscape) {
+  #robot-page {
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+
+  #robot-page > nav,
+  #robot-header,
+  #mobile-control-space {
+    display: none !important;
+  }
+
+  #robot-main {
+    inset: 0;
+    max-width: none;
+    padding: 0 !important;
+    position: fixed;
+  }
+
+  #robot-video {
+    border: 0;
+    border-radius: 0;
+    inset: 0;
+    min-height: 0;
+    position: absolute;
+  }
+
+  #robot-video img {
+    height: 100%;
+    max-width: none;
+    object-fit: contain;
+    width: 100%;
+  }
+}
+`
+
+func serveRobotControllerQR(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	http.ServeContent(w, r, "robotcontroller.png", time.Time{}, bytes.NewReader(robotControllerQR))
 }
 
 func serveRobotApp(w http.ResponseWriter, _ *http.Request) {
@@ -203,6 +373,12 @@ func (r *robotRelay) sendToRobot(data []byte) {
 	}
 }
 
+func (r *robotRelay) connected() bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.robot != nil
+}
+
 func (r *robotRelay) sendStatus() {
 	r.controlWriteMu.Lock()
 	defer r.controlWriteMu.Unlock()
@@ -274,7 +450,10 @@ func validRobotToken(r *http.Request) bool {
 const robotAppJS = `
 const controlKeys = new Set(['w','a','s','d','t','f','g','h','i','j','k','l','r','y']);
 const pressed = new Set();
+const joystickResets = [];
 const statusEl = document.querySelector('#robot-status');
+const viewportMeta = document.querySelector('meta[name="viewport"]');
+if (viewportMeta && !viewportMeta.content.includes('viewport-fit')) viewportMeta.content += ', viewport-fit=cover';
 let socket;
 let reconnectTimer;
 
@@ -304,14 +483,72 @@ function send(message) {
 function setKey(key, isPressed) {
   if (!controlKeys.has(key) || (isPressed && pressed.has(key)) || (!isPressed && !pressed.has(key))) return;
   isPressed ? pressed.add(key) : pressed.delete(key);
-  document.querySelector('[data-key="' + key + '"]')?.classList.toggle('btn-active', isPressed);
+  document.querySelectorAll('[data-key="' + key + '"]').forEach(button => button.classList.toggle('btn-active', isPressed));
   send({key, action: isPressed ? 'pressed' : 'released'});
 }
-function releaseAll() { [...pressed].forEach(key => setKey(key, false)); }
+function releaseAll() {
+  [...pressed].forEach(key => setKey(key, false));
+  joystickResets.forEach(reset => reset());
+}
+
+document.querySelectorAll('[data-joystick]').forEach(joystick => {
+  const stick = joystick.querySelector('[data-joystick-stick]');
+  const keys = {
+    up: joystick.dataset.up,
+    left: joystick.dataset.left,
+    down: joystick.dataset.down,
+    right: joystick.dataset.right,
+  };
+  const activeKeys = new Set();
+
+  function render(x, y) {
+    const travel = (joystick.clientWidth - stick.clientWidth) / 2 - 4;
+    stick.style.transform = 'translate(calc(-50% + ' + (x * travel) + 'px), calc(-50% + ' + (y * travel) + 'px))';
+  }
+  function updateDirections(x, y) {
+    const next = new Set();
+    const deadZone = 0.35;
+    if (y < -deadZone) next.add(keys.up);
+    if (y > deadZone) next.add(keys.down);
+    if (x < -deadZone) next.add(keys.left);
+    if (x > deadZone) next.add(keys.right);
+    activeKeys.forEach(key => { if (!next.has(key)) setKey(key, false); });
+    next.forEach(key => { if (!activeKeys.has(key)) setKey(key, true); });
+    activeKeys.clear();
+    next.forEach(key => activeKeys.add(key));
+  }
+  function move(event) {
+    const bounds = joystick.getBoundingClientRect();
+    let x = (event.clientX - (bounds.left + bounds.width / 2)) / (bounds.width * 0.34);
+    let y = (event.clientY - (bounds.top + bounds.height / 2)) / (bounds.height * 0.34);
+    const magnitude = Math.hypot(x, y);
+    if (magnitude > 1) { x /= magnitude; y /= magnitude; }
+    render(x, y);
+    updateDirections(x, y);
+  }
+  function reset() {
+    activeKeys.forEach(key => setKey(key, false));
+    activeKeys.clear();
+    render(0, 0);
+  }
+
+  joystick.addEventListener('pointerdown', event => {
+    event.preventDefault();
+    joystick.setPointerCapture(event.pointerId);
+    move(event);
+  });
+  joystick.addEventListener('pointermove', event => {
+    if (joystick.hasPointerCapture(event.pointerId)) move(event);
+  });
+  for (const name of ['pointerup','pointercancel','lostpointercapture']) joystick.addEventListener(name, reset);
+  joystickResets.push(reset);
+});
 
 window.addEventListener('keydown', event => { const key = event.key.toLowerCase(); if (controlKeys.has(key)) { event.preventDefault(); setKey(key, true); } });
 window.addEventListener('keyup', event => { const key = event.key.toLowerCase(); if (controlKeys.has(key)) { event.preventDefault(); setKey(key, false); } });
 window.addEventListener('blur', releaseAll);
+window.addEventListener('orientationchange', releaseAll);
+window.matchMedia('(orientation: portrait)').addEventListener?.('change', releaseAll);
 document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
 document.querySelectorAll('[data-key]').forEach(button => {
   const key = button.dataset.key;
