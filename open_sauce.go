@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -46,7 +47,27 @@ var openSauceProjects = []openSauceProject{
 }
 
 func OpenSauce(mux *http.ServeMux) {
-	mountOpenSauce(mux, openSauceMediaDir)
+	mediaDir := resolveOpenSauceMediaDir()
+	log.Printf("Open Sauce media directory: %s", mediaDir)
+	mountOpenSauce(mux, mediaDir)
+}
+
+func resolveOpenSauceMediaDir() string {
+	executable, _ := os.Executable()
+	return resolveOpenSauceMediaDirFrom(os.Getenv("OPEN_SAUCE_MEDIA_DIR"), executable)
+}
+
+func resolveOpenSauceMediaDirFrom(configured, executable string) string {
+	if configured = strings.TrimSpace(configured); configured != "" {
+		return configured
+	}
+	if executable != "" {
+		besideExecutable := filepath.Join(filepath.Dir(executable), openSauceMediaDir)
+		if info, statErr := os.Stat(besideExecutable); statErr == nil && info.IsDir() {
+			return besideExecutable
+		}
+	}
+	return openSauceMediaDir
 }
 
 func mountOpenSauce(mux *http.ServeMux, mediaDir string) {

@@ -8,7 +8,10 @@ media slideshows. Images and videos are stored by project in
 `open-sauce-media/` and served beneath `/open-sauce/media/`.
 
 The media directory is deployed beside the application binary. Keep that
-directory present when running a packaged binary outside this repository.
+directory present when running a packaged binary outside this repository. The
+application resolves it relative to the executable rather than the process's
+working directory. Set `OPEN_SAUCE_MEDIA_DIR` to an explicit path to override
+that location.
 
 ## Deployment
 

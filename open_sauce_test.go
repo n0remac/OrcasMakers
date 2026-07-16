@@ -47,6 +47,24 @@ func TestListOpenSauceMediaFiltersAndSorts(t *testing.T) {
 	}
 }
 
+func TestResolveOpenSauceMediaDirUsesConfiguredPath(t *testing.T) {
+	want := filepath.Join(t.TempDir(), "showcase-media")
+	if got := resolveOpenSauceMediaDirFrom("  "+want+"  ", ""); got != want {
+		t.Fatalf("media directory = %q, want %q", got, want)
+	}
+}
+
+func TestResolveOpenSauceMediaDirBesideExecutable(t *testing.T) {
+	root := t.TempDir()
+	want := filepath.Join(root, openSauceMediaDir)
+	if err := os.Mkdir(want, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got := resolveOpenSauceMediaDirFrom("", filepath.Join(root, "orcasmakers")); got != want {
+		t.Fatalf("media directory = %q, want %q", got, want)
+	}
+}
+
 func TestOpenSaucePageContainsProjectsMediaAndControls(t *testing.T) {
 	page := OpenSaucePage(map[string][]string{
 		"truck": {"/open-sauce/media/RCTruck/truck.jpg", "/open-sauce/media/RCTruck/drive.mp4"},
