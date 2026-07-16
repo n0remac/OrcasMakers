@@ -71,7 +71,7 @@ func TestOpenSaucePageContainsProjectsMediaAndControls(t *testing.T) {
 	}).Render()
 
 	for _, want := range []string{
-		"Open Sauce</a>",
+		"<h1>Orcas Makers</h1>",
 		"RC Truck Dashboard",
 		"3D-Printed Robot",
 		"Solar Hat",

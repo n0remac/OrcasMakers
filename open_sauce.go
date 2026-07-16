@@ -166,7 +166,10 @@ func OpenSaucePage(media map[string][]string) *Node {
 		Body(
 			Class("open-sauce-shell"),
 			Attr("data-theme", "dark"),
-			NavBar(),
+			Header(
+				Class("open-sauce-title-bar"),
+				H1(T("Orcas Makers")),
+			),
 			Main(
 				Class("open-sauce-board"),
 				Section(
@@ -338,6 +341,16 @@ const openSauceCSS = `
 
 .open-sauce-shell *, .open-sauce-shell *::before, .open-sauce-shell *::after { box-sizing: border-box; }
 .open-sauce-shell button, .open-sauce-shell a { font: inherit; }
+.open-sauce-title-bar {
+  height: 4.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 clamp(12px, 1.5vw, 22px);
+  border-bottom: 1px solid var(--os-line);
+  background: rgba(15, 24, 36, 0.82);
+}
+.open-sauce-title-bar h1 { margin: 0; font-size: clamp(1.5rem, 2vw, 2rem); font-weight: 800; letter-spacing: -0.04em; }
 .open-sauce-board { width: 100%; min-height: calc(100vh - 4.75rem); padding: clamp(12px, 1.5vw, 22px); }
 .open-sauce-projects {
   height: calc(100vh - 4.75rem - clamp(24px, 3vw, 44px));

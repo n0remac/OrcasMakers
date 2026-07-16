@@ -9,7 +9,13 @@ import (
 )
 
 func Home(mux *http.ServeMux, websocketRegistry *CommandRegistry) {
-	mux.HandleFunc("/", ServeNode(HomePage(websocketRegistry)))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		http.Redirect(w, r, "/open-sauce", http.StatusTemporaryRedirect)
+	})
 }
 
 func HomePage(websocketRegistry *CommandRegistry) *Node {
