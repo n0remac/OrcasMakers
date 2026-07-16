@@ -1,0 +1,14 @@
+# Install as /etc/turnserver.conf and replace the two placeholders.
+listening-port=3478
+min-port=49160
+max-port=49200
+external-ip=YOUR_PUBLIC_IPV4
+realm=turn.orcasmaker.com
+server-name=turn.orcasmaker.com
+use-auth-secret
+static-auth-secret=REPLACE_WITH_THE_TURN_SHARED_SECRET
+fingerprint
+no-multicast-peers
+no-cli
+no-tls
+no-dtls

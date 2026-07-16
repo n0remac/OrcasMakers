@@ -75,6 +75,18 @@ stream are publicly accessible at `/robot`.
 - Local robot builds default to `http://localhost:8081`. You can override that
   with the `ROBOT_SITE_URL` environment variable or the `-site-url` flag.
 
+## WebRTC robot controller
+
+The WebRTC controller is available at `/webrtc` alongside the existing JPEG
+controller. Its browser code, signaling hub, and TURN credential endpoint live
+in the colocated `webrtc/` package. The matching Raspberry Pi client connects
+to `/ws/webrtc` and authenticates with `ROBOT_WEBRTC_TOKEN`.
+
+Production requires Coturn at `turn.orcasmaker.com:3478`, the shared secret at
+`/etc/orcasmakers/turn-shared-secret`, and the robot token at
+`/etc/orcasmakers/robot-webrtc-token`. See `deploy/README.md` for the complete
+DNS, firewall, Coturn, systemd, and Nginx procedure.
+
 ## Car dashboard
 
 The authenticated dashboard is available at `/car`. Any signed-in user can see

@@ -9,6 +9,7 @@ import (
 	"github.com/n0remac/GoDom/auth"
 	"github.com/n0remac/GoDom/database"
 	ws "github.com/n0remac/GoDom/websocket"
+	robotwebrtc "github.com/n0remac/OrcasMakers/webrtc"
 )
 
 const webPort = ":8081"
@@ -23,6 +24,7 @@ func main() {
 	Home(mux, registry)
 	OpenSauce(mux)
 	Robot(mux)
+	robotwebrtc.Mount(mux, NavBar)
 	Car(mux, authApp)
 	Robotics(mux, ds, authApp)
 	Software(mux, ds, authApp)
@@ -60,6 +62,15 @@ func setup() (*http.ServeMux, *ws.CommandRegistry, *database.DocumentStore, *aut
 	}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", http.MethodGet)
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
 	registry := ws.NewCommandRegistry()
 	mux.HandleFunc("/ws/hub", ws.CreateWebsocket(registry))
 	imageHandler, err := ds.ImageHandler("/images/")

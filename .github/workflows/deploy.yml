@@ -17,6 +17,8 @@ jobs:
 
       - name: Build linux/amd64
         run: |
+          go test ./...
+          go vet ./...
           mkdir -p dist
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o dist/orcasmakers .
           tar -cf dist/open-sauce-media.tar open-sauce-media
@@ -57,4 +59,7 @@ jobs:
           rm -rf /srv/orcasmakers/app/open-sauce-media.previous
 
           sudo -n /usr/bin/systemctl restart orcasmakers.service
+          curl --fail --retry 10 --retry-delay 2 https://orcasmaker.com/healthz
+          /usr/bin/systemctl is-active --quiet orcasmakers.service
+          /usr/bin/systemctl is-active --quiet coturn.service
           EOF

@@ -165,7 +165,7 @@ func OpenSaucePage(media map[string][]string) *Node {
 		),
 		Body(
 			Class("open-sauce-shell"),
-			Attr("data-theme", "dark"),
+			Attr("data-theme", "light"),
 			Header(
 				Class("open-sauce-title-bar"),
 				H1(T("Orcas Makers")),
@@ -282,7 +282,7 @@ func openSauceSlideshow(project openSauceProject, items []string, carouselIndex 
 
 func openSauceMediaNode(projectName, source string, index int) *Node {
 	extension := strings.ToLower(filepath.Ext(source))
-	activeClass := "open-sauce-slide
+	activeClass := "open-sauce-slide"
 	if index == 0 {
 		activeClass += " active"
 	}
@@ -319,25 +319,25 @@ func openSauceMediaNode(projectName, source string, index int) *Node {
 
 const openSauceCSS = `
 .open-sauce-shell {
-  --os-bg: #071019;
-  --os-panel: #0f1824;
-  --os-panel-2: #131f2e;
-  --os-line: rgba(255, 255, 255, 0.11);
-  --os-text: #f5f7fb;
-  --os-muted: #a6b2c4;
-  --os-truck: #67e5d8;
-  --os-robot: #ff8765;
-  --os-solar: #ffd44d;
-  --os-cooler: #72b7ff;
-  --os-trailer: #bb8cff;
+  --os-bg: #f6f8fc;
+  --os-panel: #ffffff;
+  --os-panel-2: #f1f5f9;
+  --os-line: rgba(15, 23, 42, 0.12);
+  --os-text: #172033;
+  --os-muted: #5f6f85;
+  --os-truck: #087f75;
+  --os-robot: #c94f2d;
+  --os-solar: #a66b00;
+  --os-cooler: #1769aa;
+  --os-trailer: #7146a6;
   --os-radius: 20px;
   min-width: 980px;
   min-height: 100vh;
   margin: 0;
   overflow: auto;
   background:
-    radial-gradient(circle at 12% 5%, rgba(103, 229, 216, 0.12), transparent 27rem),
-    radial-gradient(circle at 88% 12%, rgba(255, 212, 77, 0.12), transparent 25rem),
+    radial-gradient(circle at 12% 5%, rgba(45, 212, 191, 0.17), transparent 27rem),
+    radial-gradient(circle at 88% 12%, rgba(250, 204, 21, 0.18), transparent 25rem),
     var(--os-bg);
   color: var(--os-text);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -352,7 +352,9 @@ const openSauceCSS = `
   justify-content: center;
   padding: 0 clamp(12px, 1.5vw, 22px);
   border-bottom: 1px solid var(--os-line);
-  background: rgba(15, 24, 36, 0.82);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 1px 12px rgba(15, 23, 42, 0.05);
+  backdrop-filter: blur(10px);
 }
 .open-sauce-title-bar h1 { margin: 0; font-size: clamp(1.5rem, 2vw, 2rem); font-weight: 800; letter-spacing: -0.04em; }
 .open-sauce-board { width: 100%; min-height: calc(100vh - 4.75rem); padding: clamp(12px, 1.5vw, 22px); }
@@ -377,8 +379,8 @@ const openSauceCSS = `
   flex-direction: column;
   border: 1px solid var(--os-line);
   border-radius: var(--os-radius);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.035), transparent 42%), var(--os-panel);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent 42%), var(--os-panel);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
 }
 .open-sauce-project::after {
   content: "";
@@ -432,7 +434,7 @@ const openSauceCSS = `
   display: none;
   object-fit: contain;
   object-position: center;
-  background: #050b11;
+  background: #e8edf4;
 }
 .open-sauce-slide.active { display: block; animation: open-sauce-fade 250ms ease; }
 .open-sauce-slide-controls {
@@ -447,9 +449,10 @@ const openSauceCSS = `
   pointer-events: none;
 }
 .open-sauce-slide-arrow, .open-sauce-slide-counter {
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(7, 16, 25, 0.78);
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  background: rgba(255, 255, 255, 0.88);
   color: var(--os-text);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
   backdrop-filter: blur(5px);
 }
 .open-sauce-slide-arrow {
@@ -460,7 +463,7 @@ const openSauceCSS = `
   cursor: pointer;
   pointer-events: auto;
 }
-.open-sauce-slide-arrow:hover, .open-sauce-slide-arrow:focus-visible { background: color-mix(in srgb, var(--accent) 35%, #071019); }
+.open-sauce-slide-arrow:hover, .open-sauce-slide-arrow:focus-visible { background: color-mix(in srgb, var(--accent) 16%, white); }
 .open-sauce-slide-counter { padding: 4px 8px; border-radius: 999px; font-size: 0.68rem; font-variant-numeric: tabular-nums; }
 .open-sauce-slide-empty { position: absolute; inset: 0; display: grid; place-items: center; padding: 18px; color: var(--os-muted); font-size: 0.75rem; text-align: center; }
 .open-sauce-robot-controller {
@@ -472,8 +475,8 @@ const openSauceCSS = `
   padding: 9px;
   border: 1px solid var(--os-line);
   border-radius: 14px;
-  background: rgba(15, 24, 36, 0.94);
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.42);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 35px rgba(15, 23, 42, 0.18);
   backdrop-filter: blur(8px);
 }
 .open-sauce-robot-controller h2 {

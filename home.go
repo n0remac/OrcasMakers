@@ -77,6 +77,7 @@ func NavBar() *Node {
 			Ul(Class("flex space-x-6"),
 				Li(A(Href("/open-sauce"), T("Open Sauce"))),
 				Li(A(Href("/robot"), T("Robot"))),
+				Li(A(Href("/webrtc"), T("WebRTC Robot"))),
 				Li(A(Href("/car"), T("Car"))),
 				Li(A(Href("/robotics"), T("Robotics"))),
 				Li(A(Href("/software"), T("Software"))),
