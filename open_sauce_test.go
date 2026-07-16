@@ -104,6 +104,8 @@ func TestOpenSauceRobotControllerCardVisibility(t *testing.T) {
 	for _, want := range []string{
 		"Control the robot",
 		"open-sauce-robot-controller",
+		`href="/robot"`,
+		"Open the robot control page",
 		"/robot/controller-qr.png",
 		"QR code linking to the robot control page",
 	} {

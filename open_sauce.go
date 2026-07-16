@@ -199,11 +199,15 @@ func openSauceRobotControllerCard(online bool) *Node {
 			Class("open-sauce-robot-controller"),
 			AriaLabel("Robot controller QR code"),
 			H2(T("Control the robot")),
-			Img(
-				Src("/robot/controller-qr.png"),
-				Alt("QR code linking to the robot control page"),
-				Attr("width", "200"),
-				Attr("height", "200"),
+			A(
+				Href("/robot"),
+				AriaLabel("Open the robot control page"),
+				Img(
+					Src("/robot/controller-qr.png"),
+					Alt("QR code linking to the robot control page"),
+					Attr("width", "200"),
+					Attr("height", "200"),
+				),
 			),
 		)...,
 	)
@@ -278,7 +282,7 @@ func openSauceSlideshow(project openSauceProject, items []string, carouselIndex 
 
 func openSauceMediaNode(projectName, source string, index int) *Node {
 	extension := strings.ToLower(filepath.Ext(source))
-	activeClass := "open-sauce-slide"
+	activeClass := "open-sauce-slide
 	if index == 0 {
 		activeClass += " active"
 	}
