@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,6 +15,11 @@ import (
 )
 
 const openSauceMediaDir = "open-sauce-media"
+
+const openSauceYouTubeURL = "https://qr.generatorqr.com/5dMOkzWe3"
+
+//go:embed AlexYoutube.png
+var openSauceYouTubeQR []byte
 
 var openSauceImageExtensions = map[string]bool{
 	".avif": true,
@@ -71,6 +77,8 @@ func resolveOpenSauceMediaDirFrom(configured, executable string) string {
 }
 
 func mountOpenSauce(mux *http.ServeMux, mediaDir string) {
+	mux.HandleFunc("/open-sauce/youtube-qr.png", serveOpenSauceYouTubeQR)
+
 	mediaServer := http.StripPrefix("/open-sauce/media/", http.FileServer(http.Dir(mediaDir)))
 	mux.Handle("/open-sauce/media/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
@@ -178,8 +186,42 @@ func OpenSaucePage(media map[string][]string) *Node {
 					Ch(cards),
 				),
 			),
+			openSauceYouTubeCard(),
 			openSauceRobotControllerCard(false),
 			Script(Raw(openSauceCarouselJS)),
+		),
+	)
+}
+
+func serveOpenSauceYouTubeQR(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	if r.Method == http.MethodGet {
+		_, _ = w.Write(openSauceYouTubeQR)
+	}
+}
+
+func openSauceYouTubeCard() *Node {
+	return Aside(
+		Class("open-sauce-qr-card open-sauce-youtube"),
+		AriaLabel("Orcas Makers YouTube QR code"),
+		H2(T("Watch us on YouTube")),
+		A(
+			Href(openSauceYouTubeURL),
+			Target("_blank"),
+			Rel("noopener noreferrer"),
+			AriaLabel("Open the Orcas Makers YouTube page"),
+			Img(
+				Src("/open-sauce/youtube-qr.png"),
+				Alt("QR code linking to the Orcas Makers YouTube page"),
+				Attr("width", "300"),
+				Attr("height", "300"),
+			),
 		),
 	)
 }
@@ -196,7 +238,7 @@ func openSauceRobotControllerCard(online bool) *Node {
 	}
 	return Aside(
 		append(polling,
-			Class("open-sauce-robot-controller"),
+			Class("open-sauce-qr-card open-sauce-robot-controller"),
 			AriaLabel("Robot controller QR code"),
 			H2(T("Control the robot")),
 			A(
@@ -466,10 +508,9 @@ const openSauceCSS = `
 .open-sauce-slide-arrow:hover, .open-sauce-slide-arrow:focus-visible { background: color-mix(in srgb, var(--accent) 16%, white); }
 .open-sauce-slide-counter { padding: 4px 8px; border-radius: 999px; font-size: 0.68rem; font-variant-numeric: tabular-nums; }
 .open-sauce-slide-empty { position: absolute; inset: 0; display: grid; place-items: center; padding: 18px; color: var(--os-muted); font-size: 0.75rem; text-align: center; }
-.open-sauce-robot-controller {
+.open-sauce-qr-card {
   position: fixed;
   z-index: 10;
-  right: 14px;
   bottom: 14px;
   width: 152px;
   padding: 9px;
@@ -479,7 +520,9 @@ const openSauceCSS = `
   box-shadow: 0 12px 35px rgba(15, 23, 42, 0.18);
   backdrop-filter: blur(8px);
 }
-.open-sauce-robot-controller h2 {
+.open-sauce-youtube { left: 14px; }
+.open-sauce-robot-controller { right: 14px; }
+.open-sauce-qr-card h2 {
   margin: 0 0 7px;
   color: var(--os-text);
   font-size: 0.76rem;
@@ -487,7 +530,7 @@ const openSauceCSS = `
   letter-spacing: 0.02em;
   text-align: center;
 }
-.open-sauce-robot-controller img {
+.open-sauce-qr-card img {
   display: block;
   width: 100%;
   height: auto;

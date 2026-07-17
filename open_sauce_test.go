@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -84,6 +85,9 @@ func TestOpenSaucePageContainsProjectsMediaAndControls(t *testing.T) {
 		"prefers-reduced-motion: reduce",
 		`id="open-sauce-robot-controller"`,
 		`hx-get="/open-sauce/robot-controller"`,
+		"Watch us on YouTube",
+		`src="/open-sauce/youtube-qr.png"`,
+		"Open the Orcas Makers YouTube page",
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("Open Sauce page does not contain %q", want)
@@ -91,6 +95,21 @@ func TestOpenSaucePageContainsProjectsMediaAndControls(t *testing.T) {
 	}
 	if !strings.Contains(page, "No media found for this project.") {
 		t.Error("Open Sauce page does not render empty project media states")
+	}
+}
+
+func TestOpenSauceYouTubeCard(t *testing.T) {
+	card := openSauceYouTubeCard().Render()
+	for _, want := range []string{
+		"open-sauce-youtube",
+		"Watch us on YouTube",
+		`href="` + openSauceYouTubeURL + `"`,
+		`src="/open-sauce/youtube-qr.png"`,
+		"QR code linking to the Orcas Makers YouTube page",
+	} {
+		if !strings.Contains(card, want) {
+			t.Errorf("YouTube card does not contain %q", want)
+		}
 	}
 }
 
@@ -150,6 +169,21 @@ func TestOpenSauceRoutes(t *testing.T) {
 	mux.ServeHTTP(assetPost, httptest.NewRequest(http.MethodPost, "/open-sauce/media/RCTruck/truck.jpg", nil))
 	if assetPost.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("POST media = %d", assetPost.Code)
+	}
+
+	youtubeQR := httptest.NewRecorder()
+	mux.ServeHTTP(youtubeQR, httptest.NewRequest(http.MethodGet, "/open-sauce/youtube-qr.png", nil))
+	if youtubeQR.Code != http.StatusOK || youtubeQR.Header().Get("Content-Type") != "image/png" {
+		t.Fatalf("GET YouTube QR = %d Content-Type %q", youtubeQR.Code, youtubeQR.Header().Get("Content-Type"))
+	}
+	if !bytes.Equal(youtubeQR.Body.Bytes(), openSauceYouTubeQR) {
+		t.Fatal("YouTube QR response does not match the embedded image")
+	}
+
+	youtubeQRPost := httptest.NewRecorder()
+	mux.ServeHTTP(youtubeQRPost, httptest.NewRequest(http.MethodPost, "/open-sauce/youtube-qr.png", nil))
+	if youtubeQRPost.Code != http.StatusMethodNotAllowed || youtubeQRPost.Header().Get("Allow") != "GET, HEAD" {
+		t.Fatalf("POST YouTube QR = %d Allow %q", youtubeQRPost.Code, youtubeQRPost.Header().Get("Allow"))
 	}
 
 	robotCard := httptest.NewRecorder()
