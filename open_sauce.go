@@ -16,7 +16,11 @@ import (
 
 const openSauceMediaDir = "open-sauce-media"
 
+const openSauceMakerspaceURL = "https://centerforcreative.repair/"
 const openSauceYouTubeURL = "https://qr.generatorqr.com/5dMOkzWe3"
+
+//go:embed centerforcreativerepair.png
+var openSauceMakerspaceQR []byte
 
 //go:embed AlexYoutube.png
 var openSauceYouTubeQR []byte
@@ -77,7 +81,8 @@ func resolveOpenSauceMediaDirFrom(configured, executable string) string {
 }
 
 func mountOpenSauce(mux *http.ServeMux, mediaDir string) {
-	mux.HandleFunc("/open-sauce/youtube-qr.png", serveOpenSauceYouTubeQR)
+	mux.HandleFunc("/open-sauce/makerspace-qr.png", serveOpenSauceQR(openSauceMakerspaceQR))
+	mux.HandleFunc("/open-sauce/youtube-qr.png", serveOpenSauceQR(openSauceYouTubeQR))
 
 	mediaServer := http.StripPrefix("/open-sauce/media/", http.FileServer(http.Dir(mediaDir)))
 	mux.Handle("/open-sauce/media/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -186,24 +191,51 @@ func OpenSaucePage(media map[string][]string) *Node {
 					Ch(cards),
 				),
 			),
-			openSauceYouTubeCard(),
+			Nav(
+				Class("open-sauce-left-links"),
+				AriaLabel("Orcas Makers links"),
+				openSauceMakerspaceCard(),
+				openSauceYouTubeCard(),
+			),
 			openSauceRobotControllerCard(false),
 			Script(Raw(openSauceCarouselJS)),
 		),
 	)
 }
 
-func serveOpenSauceYouTubeQR(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet && r.Method != http.MethodHead {
-		w.Header().Set("Allow", "GET, HEAD")
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
+func serveOpenSauceQR(image []byte) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			w.Header().Set("Allow", "GET, HEAD")
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Type", "image/png")
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		if r.Method == http.MethodGet {
+			_, _ = w.Write(image)
+		}
 	}
-	w.Header().Set("Content-Type", "image/png")
-	w.Header().Set("Cache-Control", "public, max-age=86400")
-	if r.Method == http.MethodGet {
-		_, _ = w.Write(openSauceYouTubeQR)
-	}
+}
+
+func openSauceMakerspaceCard() *Node {
+	return Aside(
+		Class("open-sauce-qr-card open-sauce-makerspace"),
+		AriaLabel("Center for Creative Repair QR code"),
+		H2(T("Visit our makerspace")),
+		A(
+			Href(openSauceMakerspaceURL),
+			Target("_blank"),
+			Rel("noopener noreferrer"),
+			AriaLabel("Open the Center for Creative Repair website"),
+			Img(
+				Src("/open-sauce/makerspace-qr.png"),
+				Alt("QR code linking to the Center for Creative Repair website"),
+				Attr("width", "1147"),
+				Attr("height", "1147"),
+			),
+		),
+	)
 }
 
 func openSauceYouTubeCard() *Node {
@@ -508,10 +540,16 @@ const openSauceCSS = `
 .open-sauce-slide-arrow:hover, .open-sauce-slide-arrow:focus-visible { background: color-mix(in srgb, var(--accent) 16%, white); }
 .open-sauce-slide-counter { padding: 4px 8px; border-radius: 999px; font-size: 0.68rem; font-variant-numeric: tabular-nums; }
 .open-sauce-slide-empty { position: absolute; inset: 0; display: grid; place-items: center; padding: 18px; color: var(--os-muted); font-size: 0.75rem; text-align: center; }
-.open-sauce-qr-card {
+.open-sauce-left-links {
   position: fixed;
   z-index: 10;
+  left: 14px;
   bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.open-sauce-qr-card {
   width: 152px;
   padding: 9px;
   border: 1px solid var(--os-line);
@@ -520,8 +558,12 @@ const openSauceCSS = `
   box-shadow: 0 12px 35px rgba(15, 23, 42, 0.18);
   backdrop-filter: blur(8px);
 }
-.open-sauce-youtube { left: 14px; }
-.open-sauce-robot-controller { right: 14px; }
+.open-sauce-robot-controller {
+  position: fixed;
+  z-index: 10;
+  right: 14px;
+  bottom: 14px;
+}
 .open-sauce-qr-card h2 {
   margin: 0 0 7px;
   color: var(--os-text);

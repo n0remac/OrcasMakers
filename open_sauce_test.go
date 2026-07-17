@@ -85,6 +85,9 @@ func TestOpenSaucePageContainsProjectsMediaAndControls(t *testing.T) {
 		"prefers-reduced-motion: reduce",
 		`id="open-sauce-robot-controller"`,
 		`hx-get="/open-sauce/robot-controller"`,
+		"Visit our makerspace",
+		`src="/open-sauce/makerspace-qr.png"`,
+		"Open the Center for Creative Repair website",
 		"Watch us on YouTube",
 		`src="/open-sauce/youtube-qr.png"`,
 		"Open the Orcas Makers YouTube page",
@@ -95,6 +98,26 @@ func TestOpenSaucePageContainsProjectsMediaAndControls(t *testing.T) {
 	}
 	if !strings.Contains(page, "No media found for this project.") {
 		t.Error("Open Sauce page does not render empty project media states")
+	}
+	makerspaceIndex := strings.Index(page, "Visit our makerspace")
+	youtubeIndex := strings.Index(page, "Watch us on YouTube")
+	if makerspaceIndex < 0 || youtubeIndex < 0 || makerspaceIndex > youtubeIndex {
+		t.Error("makerspace link must render above the YouTube link")
+	}
+}
+
+func TestOpenSauceMakerspaceCard(t *testing.T) {
+	card := openSauceMakerspaceCard().Render()
+	for _, want := range []string{
+		"open-sauce-makerspace",
+		"Visit our makerspace",
+		`href="` + openSauceMakerspaceURL + `"`,
+		`src="/open-sauce/makerspace-qr.png"`,
+		"QR code linking to the Center for Creative Repair website",
+	} {
+		if !strings.Contains(card, want) {
+			t.Errorf("makerspace card does not contain %q", want)
+		}
 	}
 }
 
@@ -169,6 +192,21 @@ func TestOpenSauceRoutes(t *testing.T) {
 	mux.ServeHTTP(assetPost, httptest.NewRequest(http.MethodPost, "/open-sauce/media/RCTruck/truck.jpg", nil))
 	if assetPost.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("POST media = %d", assetPost.Code)
+	}
+
+	makerspaceQR := httptest.NewRecorder()
+	mux.ServeHTTP(makerspaceQR, httptest.NewRequest(http.MethodGet, "/open-sauce/makerspace-qr.png", nil))
+	if makerspaceQR.Code != http.StatusOK || makerspaceQR.Header().Get("Content-Type") != "image/png" {
+		t.Fatalf("GET makerspace QR = %d Content-Type %q", makerspaceQR.Code, makerspaceQR.Header().Get("Content-Type"))
+	}
+	if !bytes.Equal(makerspaceQR.Body.Bytes(), openSauceMakerspaceQR) {
+		t.Fatal("makerspace QR response does not match the embedded image")
+	}
+
+	makerspaceQRPost := httptest.NewRecorder()
+	mux.ServeHTTP(makerspaceQRPost, httptest.NewRequest(http.MethodPost, "/open-sauce/makerspace-qr.png", nil))
+	if makerspaceQRPost.Code != http.StatusMethodNotAllowed || makerspaceQRPost.Header().Get("Allow") != "GET, HEAD" {
+		t.Fatalf("POST makerspace QR = %d Allow %q", makerspaceQRPost.Code, makerspaceQRPost.Header().Get("Allow"))
 	}
 
 	youtubeQR := httptest.NewRecorder()
