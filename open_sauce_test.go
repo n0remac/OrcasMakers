@@ -91,6 +91,10 @@ func TestOpenSaucePageContainsProjectsMediaAndControls(t *testing.T) {
 		"Watch us on YouTube",
 		`src="/open-sauce/youtube-qr.png"`,
 		"Open the Orcas Makers YouTube page",
+		`content="width=device-width, initial-scale=1, viewport-fit=cover"`,
+		"@media (max-width: 767px)",
+		"grid-template-columns: minmax(0, 1fr)",
+		"aspect-ratio: 4 / 3",
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("Open Sauce page does not contain %q", want)

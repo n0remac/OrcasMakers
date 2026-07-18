@@ -164,7 +164,7 @@ func OpenSaucePage(media map[string][]string) *Node {
 			Meta(Charset("utf-8")),
 			Meta(Attrs(map[string]string{
 				"name":    "viewport",
-				"content": "width=device-width, initial-scale=1",
+				"content": "width=device-width, initial-scale=1, viewport-fit=cover",
 			})),
 			Meta(Attrs(map[string]string{
 				"name":    "description",
@@ -586,6 +586,89 @@ const openSauceCSS = `
 }
 @media (max-height: 684px) {
   .open-sauce-projects { height: 520px; }
+}
+@media (max-width: 767px) {
+  .open-sauce-shell {
+    min-width: 0;
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+    overflow-x: hidden;
+  }
+  .open-sauce-title-bar {
+    height: auto;
+    min-height: 4rem;
+    padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+  }
+  .open-sauce-title-bar h1 { font-size: 1.6rem; }
+  .open-sauce-board {
+    min-height: 0;
+    padding: 14px;
+  }
+  .open-sauce-projects {
+    height: auto;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    gap: 14px;
+  }
+  .open-sauce-project,
+  .open-sauce-project.panel-position-4,
+  .open-sauce-project.panel-position-5 {
+    grid-column: 1;
+    padding: 14px;
+    border-radius: 18px;
+  }
+  .open-sauce-project-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+  }
+  .open-sauce-project h2 {
+    font-size: 1.45rem;
+    line-height: 1.1;
+  }
+  .open-sauce-project-summary {
+    font-size: 0.85rem;
+    line-height: 1.45;
+  }
+  .open-sauce-slideshow {
+    flex: none;
+    width: 100%;
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+    margin-top: 12px;
+  }
+  .open-sauce-slide-arrow {
+    width: 44px;
+    height: 44px;
+    font-size: 1.15rem;
+  }
+  .open-sauce-slide-counter {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+  .open-sauce-left-links {
+    position: static;
+    width: auto;
+    margin: 0 14px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .open-sauce-qr-card {
+    width: auto;
+    padding: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  }
+  .open-sauce-qr-card h2 {
+    min-height: 2.4em;
+    display: grid;
+    place-items: center;
+    font-size: 0.78rem;
+  }
+  .open-sauce-robot-controller {
+    position: static;
+    width: min(220px, calc(100% - 28px));
+    margin: 14px auto 0;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .open-sauce-slide.active { animation: none; }
